@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+opencv-python
+easyocr
+numpy
+Pillow
+python-multipart
+jinja2
+qrcode

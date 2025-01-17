@@ -1,0 +1,58 @@
+/* Background image and alignment styles */
+body {
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+    background-image: url('/static/background.jpg'); /* Ensure /static path for Flask */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    height: 100vh;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Container styles */
+.container {
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Heading styles */
+h1 {
+    font-size: 3rem;
+    color: #ffcc00;
+    text-shadow: 2px 2px 4px #000;
+    margin-bottom: 20px;
+}
+
+/* Button styles */
+button {
+    padding: 10px 20px;
+    font-size: 1.2rem;
+    background-color: #ff5733;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #ff7845;
+}
+
+/* Result output styles */
+#result {
+    margin-top: 20px;
+}
+
+#result img {
+    margin-top: 10px;
+    border: 2px solid #fff;
+    border-radius: 10px;
+}

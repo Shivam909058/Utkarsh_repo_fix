@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Number Plate Detection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { 
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+        #video {
+            width: 100%;
+            max-width: 640px;
+            margin: 20px auto;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            transform: scaleX(1);
+            background-color: #000;
+        }
+        #canvas {
+            display: none;
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            width: 80%;
+            max-width: 300px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #result {
+            margin: 20px auto;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 90%;
+        }
+        .result-container {
+            display: none;
+            margin-top: 20px;
+        }
+        .result-box {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 90%;
+        }
+        #plateImage {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 10px auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .camera-buttons {
+            margin: 10px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .processing {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        .detected-text {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .result-container {
+            margin: 20px auto;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 90%;
+        }
+        
+        .result-box {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .image-container {
+            margin-top: 20px;
+        }
+        
+        .detected-text {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        
+        h3 {
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+        
+        #plateImage {
+            max-width: 100%;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Number Plate Detection</h1>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    
+    <div class="camera-buttons">
+        <button class="button" id="switchCamera">Switch Camera</button>
+        <button class="button" id="capture">Capture Plate</button>
+    </div>
+
+    <div class="result-container" id="resultContainer">
+        <div class="result-box">
+            <h3>Detection Results:</h3>
+            <div class="detected-text" id="detectedText"></div>
+            <div class="timestamp" id="timestamp"></div>
+        </div>
+        <div class="image-container">
+            <h3>Captured Plate:</h3>
+            <img id="plateImage" alt="Detected Plate">
+        </div>
+    </div>
+
+    <div id="result" class="status"></div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureButton = document.getElementById('capture');
+        const switchButton = document.getElementById('switchCamera');
+        const result = document.getElementById('result');
+        const plateImage = document.getElementById('plateImage');
+        const resultContainer = document.getElementById('resultContainer');
+        const detectedText = document.getElementById('detectedText');
+        const timestampDiv = document.getElementById('timestamp');
+        
+        let currentStream = null;
+        let facingMode = 'environment';
+
+        async function startCamera() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+
+            const constraints = {
+                audio: false,
+                video: {
+                    facingMode: facingMode,
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                }
+            };
+
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = currentStream;
+                
+                await video.play();
+                captureButton.disabled = false;
+                switchButton.disabled = false;
+                result.textContent = "Camera ready. Point at a number plate and click Capture.";
+                result.className = "status success";
+            } catch (err) {
+                console.error("Camera error:", err);
+                result.textContent = `Camera error: ${err.message}. Please ensure camera permissions are granted.`;
+                result.className = "status error";
+                captureButton.disabled = true;
+            }
+        }
+
+        switchButton.addEventListener('click', () => {
+            facingMode = facingMode === 'environment' ? 'user' : 'environment';
+            startCamera();
+        });
+
+        document.addEventListener('DOMContentLoaded', startCamera);
+
+        captureButton.addEventListener('click', async () => {
+            try {
+                captureButton.disabled = true;
+                result.textContent = "Processing...";
+                result.className = "status processing";
+                resultContainer.style.display = 'none';
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+                
+                canvas.toBlob(async (blob) => {
+                    const formData = new FormData();
+                    formData.append('file', blob, 'capture.jpg');
+
+                    try {
+                        const response = await fetch('/capture', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            
+                            detectedText.textContent = '';
+    
+                            if (data.text && data.text.trim() !== '') {
+                                detectedText.textContent = `Number Plate: ${data.text}`;
+                            } else {
+                                detectedText.textContent = 'No text detected in the plate';
+                            }
+                            
+                            
+                            timestampDiv.textContent = new Date().toLocaleString();
+                            
+                            
+                            result.textContent = "Plate detected successfully!";
+                            result.className = "status success";
+                            
+                            
+                            resultContainer.style.display = 'block';
+                            
+                            
+                            plateImage.src = `/show/${data.filename}?t=${Date.now()}`;
+                            plateImage.style.display = 'block';
+                            
+                            
+                            resultContainer.scrollIntoView({ behavior: 'smooth' });
+                        } else {
+                            result.textContent = `Error: ${data.detail}`;
+                            result.className = "status error";
+                            resultContainer.style.display = 'none';
+                        }
+                    } catch (error) {
+                        console.error('Processing error:', error);
+                        result.textContent = `Error: ${error.message}`;
+                        result.className = "status error";
+                        resultContainer.style.display = 'none';
+                    }
+                    
+                    captureButton.disabled = false;
+                }, 'image/jpeg', 1.0);
+
+            } catch (error) {
+                console.error('Capture error:', error);
+                result.textContent = `Error: ${error.message}`;
+                result.className = "status error";
+                captureButton.disabled = false;
+                resultContainer.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                startCamera();
+            }
+        });
+    </script>
+</body>
+</html>
